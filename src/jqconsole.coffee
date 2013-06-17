@@ -995,6 +995,13 @@ class JQConsole
       $prompt_opposite.text @$prompt_left.text() + @$prompt_right.text()
       $prompt_which.text ''
 
+
+  # Kills the like from where the cursor is, this is emacs' ctrl-k functionality
+  Kill: ->
+    text = @$prompt_right.text()
+    if text
+      @$prompt_right.text ""
+
   # Deletes the character or word following the cursor.
   #   @arg whole_word: Whether to delete a whole word rather than a character.
   _Delete: (whole_word) ->

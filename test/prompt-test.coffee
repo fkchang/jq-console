@@ -284,4 +284,17 @@ describe 'Prompt Interaction', ->
       keyDown 46, metaKey: on
       equal jqconsole.$prompt_right.text().trim(), ''
 
+    it 'does kill to the end of the line correctly', ->
+      type 'one two three'
+      keyDown 37, metaKey: on
+      keyDown 37, metaKey: on
+      keyDown 37
+  
+      equal jqconsole.$prompt_left.text(), 'one'
+      equal jqconsole.$prompt_right.text(), ' two three'
+
+      jqconsole.Kill()
+      equal jqconsole.$prompt_right.text(), ''
+      equal jqconsole.$prompt_left.text(), 'one'
+            
 
