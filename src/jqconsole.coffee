@@ -193,6 +193,9 @@ class JQConsole
 
     # A table of custom shortcuts, mapping character codes to callbacks.
     @shortcuts = {}
+
+    # A table of custom alt shortcuts, mapping character codes to callbacks.
+    @altShortcuts = {}
     
     # The main console area. Everything else happens inside this.
     @$console = $('<pre class="jqconsole"/>').appendTo @container
@@ -333,7 +336,27 @@ class JQConsole
     
     @_LetterCaseHelper key_code, addShortcut
     return undefined
+
+  # Registers a Alt+Key shortcut.
+  #   @arg key_code: The code of the key pressing which (when Alt is held) will
+  #     trigger this shortcut. If a string is provided, the character code of
+  #     the first character is taken.
+  #   @arg callback: A function called when the shortcut is pressed; "this" will
+  #     point to the JQConsole object.
+  RegisterAltShortcut: (key_code, callback) ->
+    key_code = @_CheckKeyCode key_code
+    if typeof callback != 'function'
+      throw new Error 'Callback must be a function, not ' + callback + '.'
+
+    addShortcut = (key) =>
+      if key not of @altShortcuts then @altShortcuts[key] = []
+      @altShortcuts[key].push callback
+    
+    @_LetterCaseHelper key_code, addShortcut
+    return undefined
   
+
+
   # Removes a Ctrl+Key shortcut from shortcut registry.
   #   @arg key_code: The code of the key pressing which (when Ctrl is held) will
   #     trigger this shortcut. If a string is provided, the character code of
@@ -353,6 +376,27 @@ class JQConsole
     
     @_LetterCaseHelper key_code, removeShortcut
     return undefined
+
+  # Removes a Alt+Key shortcut from altShortcut registry.
+  #   @arg key_code: The code of the key pressing which (when Alt is held) will
+  #     trigger this altShortcut. If a string is provided, the character code of
+  #     the first character is taken.
+  #   @arg handler: The handler that was used when registering the altShortcut,
+  #     if not supplied then all altShortcut handlers corrosponding to the key
+  #     would be removed.
+  UnRegisterShortcut: (key_code, handler) ->
+    key_code = @_CheckKeyCode key_code
+    
+    removeAltShortcut = (key)=>
+      if key of @altShortcuts
+        if handler
+          @altShortcuts[key].splice @altShortcuts[key].indexOf(handler), 1
+        else
+          delete @altShortcuts[key]
+    
+    @_LetterCaseHelper key_code, removeAltShortcut
+    return undefined
+
   
   ###---------------------- END Shortcut Methods ---------------------------###
   
@@ -754,12 +798,12 @@ class JQConsole
     
     # Pass control characters which are captured on Mozilla/Safari.
     if $.browser.mozilla
-       if event.keyCode or event.altKey
+       if event.keyCode # or event.altKey
          return true
     # Pass control characters which are captured on Opera.
-    if $.browser.opera
-       if event.altKey
-         return true
+    # if $.browser.opera
+    #    if event.altKey
+    #      return true
     
     @$prompt_left.text @$prompt_left.text() + String.fromCharCode char_code
     @_ScrollToEnd()
@@ -778,7 +822,8 @@ class JQConsole
     
     # Don't care about alt-modifier.
     if event.altKey
-      return true
+      @_HandleAltShortcut key
+      # return true
     # Handle shortcuts.
     else if event.ctrlKey or event.metaKey
       return @_HandleCtrlShortcut key
@@ -835,6 +880,17 @@ class JQConsole
           return true
     # Block handled shortcuts.
     return false
+
+  # Handles an Alt-Key shortcut
+  _HandleAltShortcut: (key) ->
+    if key of @altShortcuts
+      handler.call(this) for handler in @altShortcuts[key]
+      return false
+    else
+      # Allow unhandled Alt shortcuts
+      return true
+  # Block handled shortcuts 
+
 
   # Handles the user pressing the Enter key.
   #   @arg shift: Whether the shift key is held.
