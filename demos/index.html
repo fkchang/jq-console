@@ -2,9 +2,7 @@
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
   <head>
-    <link rel="stylesheet" href="../ansi.css" type="text/css" media="all" />
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript" charset="utf-8"></script>
-    <script src="../lib/jqconsole.js"></script>
+    <link rel="stylesheet" href="../css/ansi.css" type="text/css" media="all" />
     <style>
       html, body {
         background-color: #333;
@@ -59,7 +57,12 @@
         background-color: red;
       }
     </style>
-    <script>
+  </head>
+  <body>
+    <div id="console"></div>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../lib/jqconsole.js"></script>
+       <script>
       $(function() {
         // Creating the console.
         var header = 'Welcome to JQConsole!\n' +
@@ -72,19 +75,16 @@
           jqconsole.AbortPrompt();
           handler();
         });
-        
         // Move to line start Ctrl+A.
         jqconsole.RegisterShortcut('A', function() {
           jqconsole.MoveToStart();
           handler();
         });
-        
         // Move to line end Ctrl+E.
         jqconsole.RegisterShortcut('E', function() {
           jqconsole.MoveToEnd();
           handler();
         });
-        
         jqconsole.RegisterMatching('{', '}', 'brace');
         jqconsole.RegisterMatching('(', ')', 'paran');
         jqconsole.RegisterMatching('[', ']', 'bracket');
@@ -116,8 +116,5 @@
         handler();
       });
     </script>
-  </head>
-  <body>
-    <div id="console"></div>
   </body>
 </html>

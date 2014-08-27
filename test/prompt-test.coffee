@@ -1,4 +1,4 @@
-{jqconsole, typer: {typeA, keyDown, type}} = jqconsoleSetup()
+{jqconsole, createScroll, typer: {typeA, keyDown, type}} = jqconsoleSetup()
 
 describe 'Prompt Interaction', ->
   describe '#Prompt', ->
@@ -34,24 +34,6 @@ describe 'Prompt Interaction', ->
       strictEqual jqconsole.input_callback, bCb
       strictEqual jqconsole.history_active, true
       jqconsole.AbortPrompt()
-
-  describe 'Typing', ->
-    beforeEach -> jqconsole.Prompt true, ->
-    afterEach -> jqconsole.AbortPrompt()
-
-    it 'handles chars', ->
-      str = ''
-      test = (ch) ->
-        str += ch
-        e = $.Event('keypress')
-        e.which = ch.charCodeAt(0)
-        jqconsole.$input_source.trigger e
-        equal jqconsole.$prompt.text().trim(), 'prompt_label' + str
-
-      test 'a'
-      test 'Z'
-      test '$'
-      test 'ƒ'
 
   describe '#GetPromptText', ->
     beforeEach -> jqconsole.Prompt true, ->
@@ -91,46 +73,6 @@ describe 'Prompt Interaction', ->
       type 'bar'
       jqconsole.SetPromptText('foo')
       equal jqconsole.GetPromptText(), 'foo'
-
-  describe 'Control Keys', ->
-    beforeEach -> jqconsole.Prompt true, ->
-    afterEach -> jqconsole.AbortPrompt()
-
-    it 'handles enter', ->
-      jqconsole.AbortPrompt()
-      counter = 0
-      jqconsole.Prompt true, -> counter++
-      typeA()
-      keyDown 13
-      ok counter
-      equal jqconsole.$console.find('.jqconsole-old-prompt').last().text().trim(), 'prompt_labela'
-      # Restart the prompt for other tests.
-      jqconsole.Prompt true, ->
-
-    it 'handles shift+enter', ->
-      keyDown 13, shiftKey: on
-      equal jqconsole.$prompt.text().trim(), 'prompt_label \nprompt_continue'
-
-    it 'handles tab', ->
-      typeA()
-      keyDown 9
-      equal jqconsole.$prompt.text().trim(), 'prompt_label  a'
-
-    it 'handles shift+tab', ->
-      typeA()
-      keyDown 9, shiftKey: on
-      equal jqconsole.$prompt.text().trim(), 'prompt_labela'
-
-    it 'backspace', ->
-      typeA()
-      keyDown 8
-      equal jqconsole.$prompt.text().trim(), 'prompt_label'
-
-    it 'cntrl+backspace', ->
-      typeA()
-      typeA()
-      keyDown 8, metaKey: on
-      equal jqconsole.$prompt.text().trim(), 'prompt_label'
 
   describe 'Moving', ->
     beforeEach -> jqconsole.Prompt true, ->
@@ -267,14 +209,53 @@ describe 'Prompt Interaction', ->
       keyDown 38, shiftKey: on
       equal jqconsole.$prompt_right.text().trim(), 'xyz'
 
-    # We can't test this in control key because it needs to move the cursor.
+  describe 'Control Keys', ->
+    beforeEach -> jqconsole.Prompt true, ->
+    afterEach -> jqconsole.AbortPrompt()
+
+    it 'handles enter', ->
+      jqconsole.AbortPrompt()
+      counter = 0
+      jqconsole.Prompt true, -> counter++
+      typeA()
+      keyDown 13
+      ok counter
+      equal jqconsole.$console.find('.jqconsole-old-prompt').last().text().trim(), 'prompt_labela'
+      # Restart the prompt for other tests.
+      jqconsole.Prompt true, ->
+
+    it 'handles shift+enter', ->
+      keyDown 13, shiftKey: on
+      equal jqconsole.$prompt.text().trim(), 'prompt_label \nprompt_continue'
+
+    it 'handles tab', ->
+      typeA()
+      keyDown 9
+      equal jqconsole.$prompt.text().trim(), 'prompt_label  a'
+
+    it 'handles shift+tab', ->
+      typeA()
+      keyDown 9, shiftKey: on
+      equal jqconsole.$prompt.text().trim(), 'prompt_labela'
+
+    it 'backspace', ->
+      typeA()
+      keyDown 8
+      equal jqconsole.$prompt.text().trim(), 'prompt_label'
+
+    it 'cntrl+backspace', ->
+      typeA()
+      typeA()
+      keyDown 8, metaKey: on
+      equal jqconsole.$prompt.text().trim(), 'prompt_label'
+
     it 'deletes a char', ->
       type 'xyz'
       keyDown 37
       equal jqconsole.$prompt_right.text().trim(), 'z'
       keyDown 46
       equal jqconsole.$prompt_right.text().trim(), ''
-    
+
     it 'deletes a word', ->
       type 'xyz abc'
       keyDown 37
@@ -284,17 +265,136 @@ describe 'Prompt Interaction', ->
       keyDown 46, metaKey: on
       equal jqconsole.$prompt_right.text().trim(), ''
 
-    it 'does kill to the end of the line correctly', ->
-      type 'one two three'
-      keyDown 37, metaKey: on
-      keyDown 37, metaKey: on
-      keyDown 37
-  
-      equal jqconsole.$prompt_left.text(), 'one'
-      equal jqconsole.$prompt_right.text(), ' two three'
+  describe 'scrolling', ->
+    console_height = null
+    _fast = null
 
-      jqconsole.Kill()
-      equal jqconsole.$prompt_right.text(), ''
-      equal jqconsole.$prompt_left.text(), 'one'
-            
+    before ->
+      jQuery.fx.speeds.fast = 10
+    after ->
+      jQuery.fx.speeds.fast = _fast
 
+    beforeEach ->
+      jqconsole.Reset()
+      jqconsole.Prompt true, ->
+      # Make sure the console has a scroll.
+      { console_height } = createScroll()
+
+    it 'scrolls up', (done) ->
+      before = jqconsole.$container[0].scrollTop
+      keyDown 33
+      cb = ->
+        equal jqconsole.$container[0].scrollTop, before - console_height
+        done()
+      # * 2 is some arbitrary number otherwise it fails.
+      setTimeout cb, jQuery.fx.speeds.fast * 2
+
+    it 'scrolls up twice', (done) ->
+      before = jqconsole.$container[0].scrollTop
+      keyDown 33
+      cb = ->
+        keyDown 33
+        cb = ->
+          equal jqconsole.$container[0].scrollTop, before - (console_height * 2)
+          done()
+        setTimeout cb, jQuery.fx.speeds.fast * 2
+      # * 2 is some arbitrary number otherwise it fails.
+      setTimeout cb, jQuery.fx.speeds.fast * 2
+
+    it 'scrolls down', (done) ->
+      before = jqconsole.$container[0].scrollTop
+      keyDown 33
+      cb = ->
+        keyDown 34
+        cb = ->
+          equal jqconsole.$container[0].scrollTop, before
+          done()
+        setTimeout cb, jQuery.fx.speeds.fast * 2
+      # * 2 is some arbitrary number otherwise it fails.
+      setTimeout cb, jQuery.fx.speeds.fast * 2
+
+  describe 'Typing', ->
+    beforeEach -> jqconsole.Prompt true, ->
+    afterEach -> jqconsole.AbortPrompt()
+
+    it 'handles chars', ->
+      str = ''
+      test = (ch) ->
+        str += ch
+        e = $.Event('keypress')
+        e.which = ch.charCodeAt(0)
+        jqconsole.$input_source.trigger e
+        equal jqconsole.$prompt.text().trim(), 'prompt_label' + str
+
+      test 'a'
+      test 'Z'
+      test '$'
+      test 'ƒ'
+
+    it 'scrolls all the way down when typing', (done) ->
+      createScroll()
+      keyDown 33
+      cb = ->
+        before = jqconsole.$container[0].scrollTop
+        type('a')
+        cb = ->
+          notEqual jqconsole.$container[0].scrollTop, before
+          done()
+        setTimeout cb, 0
+      setTimeout cb, jQuery.fx.speeds.fast * 2
+
+  describe 'Multiline', ->
+    beforeEach ->
+      if jqconsole.GetState() is 'prompt'
+        jqconsole.AbortPrompt()
+
+    it 'executes multiline callback', (done) ->
+      jqconsole.Prompt true, (-> ), ->
+        done()
+      type('foo')
+      keyDown 13
+
+    it 'indents', ->
+      jqconsole.Prompt true, (-> ), ->
+        return 2
+      type('foo')
+      keyDown 13
+      equal jqconsole.GetState(), 'prompt'
+      equal jqconsole.GetPromptText(), 'foo\n    '
+
+    it 'keeps indentation on shift+enter', ->
+      jqconsole.Prompt true, (-> ), ->
+        return 2
+      type('foo')
+      keyDown 9
+      keyDown 13, shiftKey: on
+      equal jqconsole.GetState(), 'prompt'
+      equal jqconsole.GetPromptText(), '  foo\n  '
+
+    it 'unindents', ->
+      jqconsole.Prompt true, (-> ), ->
+        return -2
+      type('foo')
+      keyDown 9
+      keyDown 13
+      equal jqconsole.GetPromptText(), '  foo\n'
+
+    it 'skip indent callback', (done) ->
+      jqconsole.Prompt true, done.bind(null, null), ->
+        return false
+      type('foo')
+      keyDown 13
+
+    it 'handles async treatment', (done) ->
+      jqconsole.Prompt true, done.bind(null, null), ((text, cb) -> cb false), on
+      type('foo')
+      keyDown 13
+
+  describe '#Input', ->
+    it 'should enable history', (done) ->
+      jqconsole.Prompt true, done.bind(null, null)
+      jqconsole.Input (text) ->
+        assert.equal text, 'foo'
+        setTimeout (-> keyDown(13)), 0
+      type 'foo'
+      keyDown 13
